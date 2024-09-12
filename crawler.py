@@ -8,22 +8,21 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout,
 from openpyxl import load_workbook
 from openpyxl.drawing.image import Image
 import os
-import time
 
-# ChatGPT API Key 설정
+# ChatGPT API 설정 (여기에 자신의 API 키 입력)
 openai.api_key = ""
 
-# ChatGPT API를 통해 문제 해결
-def ask_chatgpt(prompt):
-    response = openai.Completion.create(
-      engine="gpt-4",
-      prompt=prompt,
-      max_tokens=150,
-      n=1,
-      stop=None,
-      temperature=0.7,
-    )
-    return response.choices[0].text.strip()
+# ChatGPT API를 통해 문제 해결 및 데이터 검색 (gpt-3.5-turbo로 변경)
+def ask_chatgpt_for_data(prompt):
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # 모델을 gpt-4에서 gpt-3.5-turbo로 변경
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response['choices'][0]['message']['content'].strip()
+    except Exception as e:
+        print(f"ChatGPT API 오류: {e}")
+        return None
 
 # Yahoo Finance에서 ESG 데이터를 웹 스크래핑하는 함수
 def scrape_yahoo_finance_esg(ticker):
@@ -34,7 +33,7 @@ def scrape_yahoo_finance_esg(ticker):
         soup = BeautifulSoup(response.text, 'html.parser')
 
         def safe_find(key):
-            element = soup.find(text=key)
+            element = soup.find(string=key)
             return element.find_next().text if element else "N/A"
 
         data = {
@@ -64,77 +63,16 @@ def scrape_yahoo_finance_esg(ticker):
         print(f"Error: Unable to fetch data for {ticker}. Status Code: {response.status_code}")
         return None
 
-# Google Finance에서 데이터를 스크래핑하는 함수 추가
-def scrape_google_finance_esg(ticker):
-    # Google Finance에서 특정 티커의 데이터를 스크래핑하는 로직
-    url = f"https://www.google.com/finance/quote/{ticker}:NASDAQ"
-    response = requests.get(url)
-
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.text, 'html.parser')
-
-        def safe_find_google(key):
-            element = soup.find(text=key)
-            return element.find_next().text if element else "N/A"
-
-        data = {
-            'waterUsage': safe_find_google("Water Usage"),
-            'materialUsage': safe_find_google("Material Usage"),
-            'wasteManagement': safe_find_google("Waste Management"),
-            'energyUsage': safe_find_google("Energy Usage"),
-            'pollutionIncidents': safe_find_google("Pollution Incidents"),
-            'workforceDiversity': safe_find_google("Workforce Diversity"),
-            'fairCompensation': safe_find_google("Fair Compensation"),
-            'employeeWelfare': safe_find_google("Employee Welfare"),
-            'boardComposition': safe_find_google("Board Composition"),
-            'executiveCompensation': safe_find_google("Executive Compensation"),
-            'dataPrivacy': safe_find_google("Data Privacy"),
-            'ethicalDecisionMaking': safe_find_google("Ethical Decision Making")
-        }
-
-        if all(value == "N/A" for value in data.values()):
-            print(f"Google Finance에서 {ticker}에 대한 데이터를 찾을 수 없습니다.")
-            return None
-
-        return data
+# ChatGPT를 통한 추가 검색 시도
+def search_esg_with_chatgpt(ticker):
+    prompt = f"Could you provide ESG data for the company with ticker symbol '{ticker}'? Looking for details such as carbon emissions, workforce diversity, and data privacy."
+    chatgpt_data = ask_chatgpt_for_data(prompt)
+    
+    if chatgpt_data:
+        print(f"ChatGPT로부터 {ticker}에 대한 데이터 성공적으로 가져옴.")
+        return {"ChatGPT_Data": chatgpt_data}
     else:
-        print(f"Error: Unable to fetch data for {ticker} from Google Finance. Status Code: {response.status_code}")
-        return None
-
-# 다른 소스에서 데이터를 가져오는 함수 (MarketWatch 추가 예시)
-def scrape_marketwatch_esg(ticker):
-    url = f"https://www.marketwatch.com/investing/stock/{ticker}/company-profile"
-    response = requests.get(url)
-
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.text, 'html.parser')
-
-        def safe_find_marketwatch(key):
-            element = soup.find(text=key)
-            return element.find_next().text if element else "N/A"
-
-        data = {
-            'waterUsage': safe_find_marketwatch("Water Usage"),
-            'materialUsage': safe_find_marketwatch("Material Usage"),
-            'wasteManagement': safe_find_marketwatch("Waste Management"),
-            'energyUsage': safe_find_marketwatch("Energy Usage"),
-            'pollutionIncidents': safe_find_marketwatch("Pollution Incidents"),
-            'workforceDiversity': safe_find_marketwatch("Workforce Diversity"),
-            'fairCompensation': safe_find_marketwatch("Fair Compensation"),
-            'employeeWelfare': safe_find_marketwatch("Employee Welfare"),
-            'boardComposition': safe_find_marketwatch("Board Composition"),
-            'executiveCompensation': safe_find_marketwatch("Executive Compensation"),
-            'dataPrivacy': safe_find_marketwatch("Data Privacy"),
-            'ethicalDecisionMaking': safe_find_marketwatch("Ethical Decision Making")
-        }
-
-        if all(value == "N/A" for value in data.values()):
-            print(f"MarketWatch에서 {ticker}에 대한 데이터를 찾을 수 없습니다.")
-            return None
-
-        return data
-    else:
-        print(f"Error: Unable to fetch data for {ticker} from MarketWatch. Status Code: {response.status_code}")
+        print(f"ChatGPT로부터 {ticker}에 대한 데이터를 가져오지 못했습니다.")
         return None
 
 # ESG 데이터를 엑셀로 저장하고 시각화하는 함수
@@ -146,16 +84,12 @@ def save_esg_data_to_excel_and_plot(tickers, folder_path):
         # Yahoo Finance에서 ESG 데이터 가져오기
         data = scrape_yahoo_finance_esg(ticker)
 
-        # Yahoo Finance에서 실패하면 Google Finance 시도
+        # Yahoo Finance에서 실패하면 ChatGPT 시도
         if data is None:
-            print(f"Yahoo Finance에서 {ticker}에 대한 데이터를 찾지 못했습니다. Google Finance를 시도합니다.")
-            data = scrape_google_finance_esg(ticker)
+            print(f"Yahoo Finance에서 {ticker}에 대한 데이터를 찾지 못했습니다. ChatGPT를 시도합니다.")
+            data = search_esg_with_chatgpt(ticker)
 
-        # Google Finance에서 실패하면 MarketWatch 시도
-        if data is None:
-            print(f"Google Finance에서 {ticker}에 대한 데이터를 찾지 못했습니다. MarketWatch를 시도합니다.")
-            data = scrape_marketwatch_esg(ticker)
-
+        # 데이터가 존재할 경우 저장 및 시각화
         if data is not None:
             # 데이터프레임으로 변환
             df = pd.DataFrame([data])
@@ -187,7 +121,7 @@ def save_esg_data_to_excel_and_plot(tickers, folder_path):
             wb.save(file_path)
             print(f"{ticker}의 ESG 데이터와 그래프가 {file_path}에 저장되었습니다.")
         else:
-                        print(f"{ticker}에 대한 ESG 데이터를 여러 소스에서 가져오지 못했습니다.")
+            print(f"{ticker}에 대한 ESG 데이터를 가져오지 못했습니다.")
 
 # PyQt5 GUI 개선
 class MainWindow(QMainWindow):
@@ -256,6 +190,7 @@ class MainWindow(QMainWindow):
             self.message_label.setText(f"데이터가 {self.folder_path}에 저장되었습니다.")
         except Exception as e:
             self.message_label.setText(f"크롤링 중 오류가 발생했습니다: {e}")
+            QMessageBox.critical(self, "크롤링 오류", f"데이터를 가져오는 중 오류가 발생했습니다: {e}")
 
     def select_folder(self):
         folder = QFileDialog.getExistingDirectory(self, "저장할 폴더 선택", "")
@@ -271,4 +206,3 @@ if __name__ == "__main__":
     window = MainWindow()
     window.show()
     sys.exit(app.exec_())
-
