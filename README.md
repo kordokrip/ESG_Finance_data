@@ -1,6 +1,6 @@
-![image](https://github.com/user-attachments/assets/ffcb2075-840f-4ac1-9ff3-32ba5b746e48)# ESG Data Crawler and Analysis System
+![image](https://github.com/user-attachments/assets/c74e9beb-408f-4394-845b-888f29907963)# ESG Data Crawler and Analysis System
 
-![ESG Banner](https://yourimageurl.com) <!-- 여기에 프로젝트를 나타내는 이미지나 배너를 삽입하세요 -->
+![ESG Banner]([https://yourimageurl.com](https://www.complilaw.com/wp-content/uploads/2023/09/AdobeStock_573355954-1.jpeg)) <!-- 여기에 프로젝트를 나타내는 이미지나 배너를 삽입하세요 -->
 
 ## **Table of Contents**
 - [Overview](#overview)
