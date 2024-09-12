@@ -1,8 +1,10 @@
+아래는 ESG 데이터를 크롤링하고 분석하는 시스템에 대한 **GitHub 프로젝트의 `README.md` 작성 예시**입니다. 이 문서는 프로젝트에 대한 설명, 사용 방법, 기술 스택, 데이터 구조, 설치 방법, 주요 기능, 그리고 시스템 아키텍처에 대한 정보를 포함합니다. 디자인 요소도 설명하며, 예시 코드와 명령어를 포함해 **프로젝트의 목적과 사용 방법을 구체적으로 안내**합니다.
 
+---
 
 # ESG Data Crawler and Analysis System
 
-https://www.complilaw.com/wp-content/uploads/2023/09/AdobeStock_573355954-1.jpeg
+![ESG Banner](https://www.complilaw.com/wp-content/uploads/2023/09/AdobeStock_570800308-1.jpeg) 
 
 ## **Table of Contents**
 - [Overview](#overview)
