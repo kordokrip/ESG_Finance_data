@@ -164,6 +164,51 @@ We welcome contributions! Please follow the steps below:
 4. Push to the branch: `git push origin feature-name`.
 5. Create a pull request and describe your changes.
 
+┌───────────────────────────┐
+│   Start Application       │
+└───────────────┬───────────┘
+                │
+                ▼
+┌────────────────────────────────┐
+│  User Inputs Ticker Symbols     │
+│  (Max 5 Symbols)                │
+└───────────────┬────────────────┘
+                │
+                ▼
+┌────────────────────────────────┐
+│  Choose Folder to Save Data     │
+└───────────────┬────────────────┘
+                │
+                ▼
+┌────────────────────────────────────────┐
+│  Attempt to Fetch ESG Data from Yahoo  │
+│  Finance using Web Scraping            │
+└───────────────┬────────────────────────┘
+                │
+                │ Success:               │
+                ▼                        ▼
+┌────────────────────────┐   ┌─────────────────────────┐
+│  Success: Yahoo Data   │   │  Failure: Try ChatGPT    │
+│  Process and Store Data│   │  API for Data Retrieval  │
+└───────────────┬────────┘   └─────────────────────────┘
+                │                        │
+                ▼                        ▼
+┌───────────────────────────────────────────────┐
+│  Store Data in Excel and Create Visualization │
+│  (Including Graphs with Matplotlib)           │
+└───────────────┬───────────────────────────────┘
+                │
+                ▼
+┌─────────────────────────────────────────────────────┐
+│  Success/Failure Notification to User (Error Alerts) │
+│  Display Message: Data Stored or Error Occurred      │
+└─────────────────────────────────────────────────────┘
+                │
+                ▼
+┌─────────────────────────────┐
+│  End Program                │
+└─────────────────────────────┘
+
 ## **License**
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
