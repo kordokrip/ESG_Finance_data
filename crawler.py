@@ -8,48 +8,41 @@ from PyQt5.QtCore import Qt
 class YahooFinanceApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.api_key = "YOUR_API_KEY"  # API key 입력
+        self.api_key = " API key"  # API key
         self.initUI()
 
     def initUI(self):
-        # UI 초기화 설정
-        # Initializes the User Interface (UI) layout with input fields, buttons, and progress bars.
         layout = QVBoxLayout()
 
-        # 티커 입력 창을 10개까지 제공
-        # Provides 10 fields for the user to input stock tickers.
+        # Ticker input fields
         self.ticker_inputs = []
         for i in range(10):
             ticker_input = QLineEdit(self)
-            ticker_input.setPlaceholderText(f'Ticker {i+1}')  # 입력란 설명 표시
+            ticker_input.setPlaceholderText(f'Ticker {i+1}')
             layout.addWidget(ticker_input)
             self.ticker_inputs.append(ticker_input)
 
-        # 연도 선택 콤보박스 추가
-        # Adds dropdowns for selecting the start and end year for data retrieval.
+        # ComboBoxes for selecting year range
         self.start_year_combo = QComboBox(self)
         self.start_year_combo.addItems(['2020', '2021', '2022', '2023'])
-        layout.addWidget(QLabel("Start Year 선택"))  # 시작 연도 라벨
+        layout.addWidget(QLabel("Start Year"))
         layout.addWidget(self.start_year_combo)
 
         self.end_year_combo = QComboBox(self)
         self.end_year_combo.addItems(['2020', '2021', '2022', '2023'])
-        layout.addWidget(QLabel("End Year 선택"))  # 끝 연도 라벨
+        layout.addWidget(QLabel("End Year"))
         layout.addWidget(self.end_year_combo)
 
-        # 진행 상태 표시를 위한 Progress Bar 추가
-        # Adds a progress bar to show data retrieval progress.
+        # Progress Bar for status
         self.progress_bar = QProgressBar(self)
         layout.addWidget(self.progress_bar)
 
-        # 데이터 수집 버튼 추가
-        # Adds a button to trigger the data fetch process.
+        # Fetch data button
         self.fetch_button = QPushButton('Fetch Data & Save as Excel', self)
         self.fetch_button.clicked.connect(self.fetch_data)
         layout.addWidget(self.fetch_button)
 
-        # 저장 경로 선택 버튼 추가
-        # Adds a button to let the user select where to save the Excel file.
+        # Save path selection button
         self.save_path_button = QPushButton('Select Save Path', self)
         self.save_path_button.clicked.connect(self.choose_save_directory)
         layout.addWidget(self.save_path_button)
@@ -60,23 +53,17 @@ class YahooFinanceApp(QWidget):
         self.setLayout(layout)
 
     def choose_save_directory(self):
-        # 파일 저장 경로 선택 다이얼로그
-        # Opens a dialog for the user to choose where to save the Excel file.
         directory = QFileDialog.getExistingDirectory(self, "Choose Save Directory")
         if directory:
             self.save_path_label.setText(f'Save Path: {directory}')
             self.save_directory = directory
 
     def fetch_data(self):
-        # 티커 입력값을 읽고 연도 선택 및 데이터 수집을 수행
-        # Reads the ticker inputs and year selections, then retrieves data from the API.
         tickers = [ticker.text().upper() for ticker in self.ticker_inputs if ticker.text().strip()]
         if not tickers:
             QMessageBox.warning(self, "Error", "Please enter at least one ticker.")
             return
 
-        # 연도별로 데이터 요청 기간 설정
-        # Converts the selected years into timestamps for API requests.
         start_year = int(self.start_year_combo.currentText())
         end_year = int(self.end_year_combo.currentText())
 
@@ -89,7 +76,8 @@ class YahooFinanceApp(QWidget):
         results = []
         for i, ticker in enumerate(tickers):
             try:
-                url = f"https://yahoo-finance-api-data.p.rapidapi.com/symbol/price-history"
+                # Fetching stock price history
+                price_history_url = f"https://yahoo-finance-api-data.p.rapidapi.com/symbol/price-history"
                 querystring = {
                     "symbol": ticker,
                     "from": start_timestamp,
@@ -102,7 +90,7 @@ class YahooFinanceApp(QWidget):
                     "X-RapidAPI-Key": self.api_key,
                     "X-RapidAPI-Host": "yahoo-finance-api-data.p.rapidapi.com"
                 }
-                response = requests.get(url, headers=headers, params=querystring)
+                response = requests.get(price_history_url, headers=headers, params=querystring)
 
                 if response.status_code == 200:
                     data = response.json()
@@ -121,54 +109,92 @@ class YahooFinanceApp(QWidget):
             self.save_to_excel(results)
 
     def process_data(self, ticker, data):
-        # 데이터를 파싱하여 각 티커에 대한 주가 및 재무 정보를 처리
-        # Parses the received data and extracts the required financial information.
         try:
+            # Stock price data
+            price_data = data.get('data', [])
             close_prices = {}
-            if 'priceHistory' in data:
-                price_history = data.get('priceHistory', {}).get('prices', [])
-                for price in price_history:
-                    date = pd.to_datetime(price.get('date'), unit='s')
-                    if date.month == 12 and date.day == 31:
-                        close_prices[date.year] = price.get('close', 'N/A')
 
-            shares_outstanding = data.get('summaryDetail', {}).get('sharesOutstanding', {}).get('raw', 'N/A')
-            market_cap = data.get('summaryDetail', {}).get('marketCap', {}).get('raw', 'N/A')
-            eps = data.get('defaultKeyStatistics', {}).get('trailingEps', {}).get('raw', 'N/A')
-            ebitda = data.get('financialData', {}).get('ebitda', {}).get('raw', 'N/A')
-            total_debt = data.get('balanceSheetHistory', {}).get('balanceSheetStatements', [{}])[-1].get('totalDebt', {}).get('raw', 'N/A')
-            revenue = data.get('incomeStatementHistory', {}).get('incomeStatementHistory', [{}])[-1].get('totalRevenue', {}).get('raw', 'N/A')
+            if price_data:
+                for price in price_data:
+                    timestamp = pd.to_datetime(price.get('timestamp'), unit='s')
+                    if timestamp.month == 12 and timestamp.day == 31:  # Year-end data
+                        close_prices[timestamp.year] = price.get('close', 'N/A')
 
-            sector = data.get('summaryProfile', {}).get('sector', 'N/A')
-            employees = data.get('summaryProfile', {}).get('fullTimeEmployees', 'N/A')
+            # Fetch additional data like shares issued, market cap, financials from other endpoints
+            shares_issued = self.fetch_shares_issued(ticker)
+            financial_data = self.fetch_financial_data(ticker)
 
-            esg_score = data.get('sustainability', {}).get('totalEsg', 'N/A')
-
+            # Combine results
             result = {
-                '티커': ticker,
-                '2020년 마지막 마감 주가': close_prices.get(2020, 'N/A'),
-                '2021년 마지막 마감 주가': close_prices.get(2021, 'N/A'),
-                '2022년 마지막 마감 주가': close_prices.get(2022, 'N/A'),
-                '2023년 마지막 마감 주가': close_prices.get(2023, 'N/A'),
-                '발행 주식 수': shares_outstanding,
-                'Market Cap': market_cap,
-                'EBITDA': ebitda,
-                '매출액': revenue,
-                'EPS': eps,
-                '총부채': total_debt,
-                '업종': sector,
-                '종업원 수': employees,
-                'ESG 스코어': esg_score
+                'Ticker': ticker,
+                '2020 Closing Price': close_prices.get(2020, 'N/A'),
+                '2021 Closing Price': close_prices.get(2021, 'N/A'),
+                '2022 Closing Price': close_prices.get(2022, 'N/A'),
+                '2023 Closing Price': close_prices.get(2023, 'N/A'),
+                'Shares Issued': shares_issued,
+                'Market Cap': financial_data.get('market_cap', 'N/A'),
+                'EBITDA': financial_data.get('ebitda', 'N/A'),
+                'Revenue': financial_data.get('revenue', 'N/A'),
+                'Net Debt': financial_data.get('net_debt', 'N/A'),
+                'Total Debt': financial_data.get('total_debt', 'N/A'),
+                'EPS': financial_data.get('eps', 'N/A'),
+                'Industry': financial_data.get('industry', 'N/A'),
+                'Employee Count': financial_data.get('employees', 'N/A'),
+                'ESG Score': financial_data.get('esg_score', 'N/A')
             }
 
             return result
 
         except Exception as e:
-            return {'티커': ticker, '오류': f"Data parsing error: {str(e)}"}
+            return {'Ticker': ticker, 'Error': f"Data parsing error: {str(e)}"}
+
+    def fetch_shares_issued(self, ticker):
+        # Additional endpoint for shares issued
+        try:
+            shares_url = f"https://yahoo-finance-api-data.p.rapidapi.com/symbol/shares-outstanding"
+            querystring = {"symbol": ticker}
+            headers = {
+                "X-RapidAPI-Key": self.api_key,
+                "X-RapidAPI-Host": "yahoo-finance-api-data.p.rapidapi.com"
+            }
+            response = requests.get(shares_url, headers=headers, params=querystring)
+            if response.status_code == 200:
+                shares_data = response.json()
+                return shares_data.get('sharesOutstanding', 'N/A')
+            else:
+                return 'N/A'
+        except:
+            return 'N/A'
+
+    def fetch_financial_data(self, ticker):
+        # Additional endpoint for financials (market cap, EBITDA, etc.)
+        try:
+            financial_url = f"https://yahoo-finance-api-data.p.rapidapi.com/symbol/financials"
+            querystring = {"symbol": ticker}
+            headers = {
+                "X-RapidAPI-Key": self.api_key,
+                "X-RapidAPI-Host": "yahoo-finance-api-data.p.rapidapi.com"
+            }
+            response = requests.get(financial_url, headers=headers, params=querystring)
+            if response.status_code == 200:
+                financial_data = response.json()
+                return {
+                    'market_cap': financial_data.get('marketCap', 'N/A'),
+                    'ebitda': financial_data.get('ebitda', 'N/A'),
+                    'revenue': financial_data.get('totalRevenue', 'N/A'),
+                    'net_debt': financial_data.get('netDebt', 'N/A'),
+                    'total_debt': financial_data.get('totalDebt', 'N/A'),
+                    'eps': financial_data.get('eps', 'N/A'),
+                    'industry': financial_data.get('industry', 'N/A'),
+                    'employees': financial_data.get('fullTimeEmployees', 'N/A'),
+                    'esg_score': financial_data.get('esgScore', 'N/A')
+                }
+            else:
+                return {}
+        except:
+            return {}
 
     def save_to_excel(self, results):
-        # 엑셀 파일로 데이터 저장
-        # Saves the fetched data into an Excel file.
         df = pd.DataFrame(results)
         save_path = f"{self.save_directory}/Financial_Data.xlsx"
         df.to_excel(save_path, index=False)
