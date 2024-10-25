@@ -8,13 +8,12 @@ from PyQt5.QtCore import Qt
 class YahooFinanceApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.api_key = " API key"  # API key
+        self.api_key = "API key"  # API key
         self.initUI()
 
     def initUI(self):
         layout = QVBoxLayout()
 
-        # Ticker input fields
         self.ticker_inputs = []
         for i in range(10):
             ticker_input = QLineEdit(self)
@@ -166,32 +165,62 @@ class YahooFinanceApp(QWidget):
         except:
             return 'N/A'
 
-    def fetch_financial_data(self, ticker):
-        # Additional endpoint for financials (market cap, EBITDA, etc.)
+        """
+        Update 10/26
+        Since the given API response format only provides stock price data (timestamp, high, low, open, volume, close, adjclose), 
+        some data may be returned as N/A. To compensate for this, a method of collecting data by combining multiple API endpoints is required.
+        """
+
+    def fetch_financial_data(self, ticker): 
         try:
-            financial_url = f"https://yahoo-finance-api-data.p.rapidapi.com/symbol/financials"
-            querystring = {"symbol": ticker}
-            headers = {
-                "X-RapidAPI-Key": self.api_key,
-                "X-RapidAPI-Host": "yahoo-finance-api-data.p.rapidapi.com"
-            }
-            response = requests.get(financial_url, headers=headers, params=querystring)
-            if response.status_code == 200:
-                financial_data = response.json()
-                return {
-                    'market_cap': financial_data.get('marketCap', 'N/A'),
-                    'ebitda': financial_data.get('ebitda', 'N/A'),
-                    'revenue': financial_data.get('totalRevenue', 'N/A'),
-                    'net_debt': financial_data.get('netDebt', 'N/A'),
-                    'total_debt': financial_data.get('totalDebt', 'N/A'),
-                    'eps': financial_data.get('eps', 'N/A'),
-                    'industry': financial_data.get('industry', 'N/A'),
-                    'employees': financial_data.get('fullTimeEmployees', 'N/A'),
-                    'esg_score': financial_data.get('esgScore', 'N/A')
-                }
+            # Price history 데이터 수집
+            price_url = f"https://yahoo-finance-api-data.p.rapidapi.com/symbol/price-history"
+            price_query = {"symbol": ticker, "type": "price_history", "frequency": "1d"}
+            headers = {"X-RapidAPI-Key": self.api_key, "X-RapidAPI-Host": "yahoo-finance-api-data.p.rapidapi.com"}
+            
+            price_response = requests.get(price_url, headers=headers, params=price_query)
+            if price_response.status_code == 200:
+                price_data = price_response.json().get("data", [])
             else:
-                return {}
-        except:
+                price_data = []
+
+            # 발행 주식 수 데이터 수집
+            shares_url = f"https://yahoo-finance-api-data.p.rapidapi.com/symbol/shares-outstanding"
+            shares_query = {"symbol": ticker}
+            
+            shares_response = requests.get(shares_url, headers=headers, params=shares_query)
+            shares_data = shares_response.json().get("sharesOutstanding", "N/A") if shares_response.status_code == 200 else "N/A"
+            
+            # 재무 데이터 수집
+            financial_url = f"https://yahoo-finance-api-data.p.rapidapi.com/symbol/financials"
+            financial_query = {"symbol": ticker}
+            
+            financial_response = requests.get(financial_url, headers=headers, params=financial_query)
+            if financial_response.status_code == 200:
+                financial_data = financial_response.json()
+                market_cap = financial_data.get("marketCap", "N/A")
+                ebitda = financial_data.get("ebitda", "N/A")
+                revenue = financial_data.get("totalRevenue", "N/A")
+                net_debt = financial_data.get("netDebt", "N/A")
+                total_debt = financial_data.get("totalDebt", "N/A")
+                eps = financial_data.get("eps", "N/A")
+            else:
+                market_cap = ebitda = revenue = net_debt = total_debt = eps = "N/A"
+            
+            # 필요한 데이터를 통합하여 반환
+            return {
+                "price_data": price_data,
+                "shares_issued": shares_data,
+                "market_cap": market_cap,
+                "ebitda": ebitda,
+                "revenue": revenue,
+                "net_debt": net_debt,
+                "total_debt": total_debt,
+                "eps": eps
+            }
+            
+        except Exception as e:
+            print(f"Error fetching financial data for {ticker}: {e}")
             return {}
 
     def save_to_excel(self, results):
